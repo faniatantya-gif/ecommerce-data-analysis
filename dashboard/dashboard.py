@@ -2,12 +2,20 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import streamlit as st
+import os
 
 st.set_page_config(page_title="E-Commerce Dashboard", layout="wide")
 
 @st.cache_data
+
 def load_data():
-    df = pd.read_csv("dashboard/main_data.csv")
+    # Mengambil path folder tempat file dashboard.py ini berada
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    # Menggabungkan path folder tersebut dengan nama file datanya
+    path_data = os.path.join(base_dir, "main_data.csv")
+    
+    df = pd.read_csv(path_data)
     df['order_purchase_timestamp'] = pd.to_datetime(df['order_purchase_timestamp'])
     return df
 

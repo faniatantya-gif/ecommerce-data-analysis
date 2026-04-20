@@ -45,106 +45,182 @@ with col3:
     st.metric("Total Customers", value=main_df.customer_unique_id.nunique())
 
 st.divider()
+tab_analysis, tab_eda = st.tabs(["Performa Bisnis", "Lokasi & Status Operasional"])
+with tab_analysis:
+    # --- PERTANYAAN 1: Bagaimana performa pendapatan (revenue) dari berbagai kategori produk selama periode tahun 2018, dan kategori mana yang memberikan kontribusi paling signifikan? ---
+    st.subheader("Top 10 Product Categories by Revenue")
+    category_rev = main_df.groupby("product_category_name_english").price.sum().sort_values(ascending=False).head(10).reset_index()
 
-# --- PERTANYAAN 1: Bagaimana performa pendapatan (revenue) dari berbagai kategori produk selama periode tahun 2018, dan kategori mana yang memberikan kontribusi paling signifikan? ---
-st.subheader("Top 10 Product Categories by Revenue")
-category_rev = main_df.groupby("product_category_name_english").price.sum().sort_values(ascending=False).head(10).reset_index()
+    fig_rev, ax_rev = plt.subplots(figsize=(10, 5))
+    sns.barplot(x="price", y="product_category_name_english", data=category_rev, palette="viridis", ax=ax_rev)
+    ax_rev.set_xlabel("Revenue (BRL)")
+    ax_rev.set_ylabel(None)
+    st.pyplot(fig_rev)
 
-fig_rev, ax_rev = plt.subplots(figsize=(10, 5))
-sns.barplot(x="price", y="product_category_name_english", data=category_rev, palette="viridis", ax=ax_rev)
-ax_rev.set_xlabel("Revenue (BRL)")
-ax_rev.set_ylabel(None)
-st.pyplot(fig_rev)
+    # --- PERTANYAAN 2: Bagaimana segmentasi profil pelanggan berdasarkan perilaku belanja menggunakan metode analisis RFM (Recency, Frequency, Monetary) untuk merancang strategi pemasaran yang lebih personal? ---
+    st.subheader("Best Customer Based on RFM Parameters")
 
-# --- PERTANYAAN 2: Bagaimana segmentasi profil pelanggan berdasarkan perilaku belanja menggunakan metode analisis RFM (Recency, Frequency, Monetary) untuk merancang strategi pemasaran yang lebih personal? ---
-st.subheader("Best Customer Based on RFM Parameters")
+    snapshot_date = main_df['order_purchase_timestamp'].max() + pd.Timedelta(days=1)
+    rfm_df = main_df.groupby('customer_unique_id').agg({
+        'order_purchase_timestamp': lambda x: (snapshot_date - x.max()).days, # Recency
+        'order_id': 'nunique',                                               # Frequency
+        'price': 'sum'                                                       # Monetary
+    }).reset_index()
 
-snapshot_date = main_df['order_purchase_timestamp'].max() + pd.Timedelta(days=1)
-rfm_df = main_df.groupby('customer_unique_id').agg({
-    'order_purchase_timestamp': lambda x: (snapshot_date - x.max()).days, # Recency
-    'order_id': 'nunique',                                               # Frequency
-    'price': 'sum'                                                       # Monetary
-}).reset_index()
+    rfm_df.columns = ['customer_id', 'recency', 'frequency', 'monetary']
 
-rfm_df.columns = ['customer_id', 'recency', 'frequency', 'monetary']
+    fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(30, 10))
+    colors = ["#72BCD4", "#72BCD4", "#72BCD4", "#72BCD4", "#72BCD4"]
 
-fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(30, 10))
-colors = ["#72BCD4", "#72BCD4", "#72BCD4", "#72BCD4", "#72BCD4"]
+    # Plot Recency
+    sns.barplot(y="recency", x="customer_id", data=rfm_df.sort_values(by="recency", ascending=True).head(5), palette=colors, ax=ax[0])
+    ax[0].set_ylabel(None)
+    ax[0].set_xlabel("Customer ID", fontsize=15)
+    ax[0].set_title("By Recency (days)", loc="center", fontsize=25)
+    ax[0].tick_params(axis='x', rotation=45, labelsize=12)
 
-# Plot Recency
-sns.barplot(y="recency", x="customer_id", data=rfm_df.sort_values(by="recency", ascending=True).head(5), palette=colors, ax=ax[0])
-ax[0].set_ylabel(None)
-ax[0].set_xlabel("Customer ID", fontsize=15)
-ax[0].set_title("By Recency (days)", loc="center", fontsize=25)
-ax[0].tick_params(axis='x', rotation=45, labelsize=12)
+    # Plot Frequency
+    sns.barplot(y="frequency", x="customer_id", data=rfm_df.sort_values(by="frequency", ascending=False).head(5), palette=colors, ax=ax[1])
+    ax[1].set_ylabel(None)
+    ax[1].set_xlabel("Customer ID", fontsize=15)
+    ax[1].set_title("By Frequency", loc="center", fontsize=25)
+    ax[1].tick_params(axis='x', rotation=45, labelsize=12)
 
-# Plot Frequency
-sns.barplot(y="frequency", x="customer_id", data=rfm_df.sort_values(by="frequency", ascending=False).head(5), palette=colors, ax=ax[1])
-ax[1].set_ylabel(None)
-ax[1].set_xlabel("Customer ID", fontsize=15)
-ax[1].set_title("By Frequency", loc="center", fontsize=25)
-ax[1].tick_params(axis='x', rotation=45, labelsize=12)
+    # Plot Monetary
+    sns.barplot(y="monetary", x="customer_id", data=rfm_df.sort_values(by="monetary", ascending=False).head(5), palette=colors, ax=ax[2])
+    ax[2].set_ylabel(None)
+    ax[2].set_xlabel("Customer ID", fontsize=15)
+    ax[2].set_title("By Monetary", loc="center", fontsize=25)
+    ax[2].tick_params(axis='x', rotation=45, labelsize=12)
 
-# Plot Monetary
-sns.barplot(y="monetary", x="customer_id", data=rfm_df.sort_values(by="monetary", ascending=False).head(5), palette=colors, ax=ax[2])
-ax[2].set_ylabel(None)
-ax[2].set_xlabel("Customer ID", fontsize=15)
-ax[2].set_title("By Monetary", loc="center", fontsize=25)
-ax[2].tick_params(axis='x', rotation=45, labelsize=12)
+    plt.tight_layout()
+    st.pyplot(fig)
 
-plt.tight_layout()
-st.pyplot(fig)
+    # --- PERTANYAAN 3: Bagaimana tren performa penjualan perusahaan dari bulan ke bulan selama tahun 2018? ---
+    st.subheader("Monthly Sales Trend")
+    monthly_trend = main_df.resample(rule='ME', on='order_purchase_timestamp').order_id.nunique().reset_index()
+    monthly_trend['order_month'] = monthly_trend['order_purchase_timestamp'].dt.strftime('%b %Y')
 
-# --- PERTANYAAN 3: Bagaimana tren performa penjualan perusahaan dari bulan ke bulan selama tahun 2018? ---
-st.subheader("Monthly Sales Trend")
-monthly_trend = main_df.resample(rule='ME', on='order_purchase_timestamp').order_id.nunique().reset_index()
-monthly_trend['order_month'] = monthly_trend['order_purchase_timestamp'].dt.strftime('%b %Y')
+    fig_trend, ax_trend = plt.subplots(figsize=(12, 5))
+    ax_trend.plot(monthly_trend['order_month'], monthly_trend['order_id'], marker='o', linewidth=2, color="#72BCD4")
+    plt.xticks(rotation=45)
+    st.pyplot(fig_trend)
 
-fig_trend, ax_trend = plt.subplots(figsize=(12, 5))
-ax_trend.plot(monthly_trend['order_month'], monthly_trend['order_id'], marker='o', linewidth=2, color="#72BCD4")
-plt.xticks(rotation=45)
-st.pyplot(fig_trend)
+    st.markdown("#### Customer Segmentation Proportion")
 
-st.markdown("#### Customer Segmentation Proportion")
+    rfm_df['r_rank'] = rfm_df['recency'].rank(ascending=False)
+    rfm_df['f_rank'] = rfm_df['frequency'].rank(ascending=True)
+    rfm_df['m_rank'] = rfm_df['monetary'].rank(ascending=True)
 
-rfm_df['r_rank'] = rfm_df['recency'].rank(ascending=False)
-rfm_df['f_rank'] = rfm_df['frequency'].rank(ascending=True)
-rfm_df['m_rank'] = rfm_df['monetary'].rank(ascending=True)
+    rfm_df['r_rank_norm'] = (rfm_df['r_rank']/rfm_df['r_rank'].max())*100
+    rfm_df['f_rank_norm'] = (rfm_df['f_rank']/rfm_df['f_rank'].max())*100
+    rfm_df['m_rank_norm'] = (rfm_df['m_rank']/rfm_df['m_rank'].max())*100
 
-rfm_df['r_rank_norm'] = (rfm_df['r_rank']/rfm_df['r_rank'].max())*100
-rfm_df['f_rank_norm'] = (rfm_df['f_rank']/rfm_df['f_rank'].max())*100
-rfm_df['m_rank_norm'] = (rfm_df['m_rank']/rfm_df['m_rank'].max())*100
+    rfm_df['rfm_score'] = rfm_df[['r_rank_norm', 'f_rank_norm', 'm_rank_norm']].mean(axis=1)
 
-rfm_df['rfm_score'] = rfm_df[['r_rank_norm', 'f_rank_norm', 'm_rank_norm']].mean(axis=1)
+    rfm_df.drop(columns=['r_rank', 'f_rank', 'm_rank'], inplace=True)
 
-rfm_df.drop(columns=['r_rank', 'f_rank', 'm_rank'], inplace=True)
+    # Binning menjadi Segmen
+    rfm_df['customer_segment'] = pd.cut(rfm_df['rfm_score'],
+                                        bins=[0, 20, 50, 80, 100],
+                                        labels=['Hibernating', 'At Risk', 'Loyalist', 'Champions'],
+                                        include_lowest=True)
 
-# Binning menjadi Segmen
-rfm_df['customer_segment'] = pd.cut(rfm_df['rfm_score'],
-                                    bins=[0, 20, 50, 80, 100],
-                                    labels=['Hibernating', 'At Risk', 'Loyalist', 'Champions'],
-                                    include_lowest=True)
+    segment_counts = rfm_df['customer_segment'].value_counts().sort_index()
 
-segment_counts = rfm_df['customer_segment'].value_counts().sort_index()
+    fig_pie, ax_pie = plt.subplots(figsize=(10, 8))
+    colors_pie = sns.color_palette("viridis", len(segment_counts))
 
-fig_pie, ax_pie = plt.subplots(figsize=(10, 8))
-colors_pie = sns.color_palette("viridis", len(segment_counts))
+    ax_pie.pie(
+        segment_counts,
+        labels=segment_counts.index,
+        autopct='%1.1f%%',
+        startangle=140,
+        colors=colors_pie,
+        pctdistance=0.85,
+        explode=[0.05] * len(segment_counts)
+    )
 
-ax_pie.pie(
-    segment_counts,
-    labels=segment_counts.index,
-    autopct='%1.1f%%',
-    startangle=140,
-    colors=colors_pie,
-    pctdistance=0.85,
-    explode=[0.05] * len(segment_counts)
-)
+    centre_circle = plt.Circle((0,0), 0.70, fc='white')
+    ax_pie.add_artist(centre_circle)
 
-centre_circle = plt.Circle((0,0), 0.70, fc='white')
-ax_pie.add_artist(centre_circle)
+    plt.axis('equal')
+    plt.tight_layout()
+    st.pyplot(fig_pie)
 
-plt.axis('equal')
-plt.tight_layout()
-st.pyplot(fig_pie)
+    # Memasukkan expander di bawah grafik
+    with st.expander("🔍 Lihat Detail & Definisi Segmen Pelanggan"):
+        st.write("""
+        Analisis segmentasi ini menggunakan teknik binning pada skor rata-rata RFM (skala 0-100). 
+        Berikut adalah detail karakteristik untuk setiap kelompok:
+        """)
+        
+        # Membuat tabel ringkasan rata-rata per segmen (opsional tapi keren)
+        segment_summary = rfm_df.groupby('customer_segment').agg({
+            'recency': 'mean',
+            'frequency': 'mean',
+            'monetary': 'mean',
+            'customer_id': 'count'
+        }).rename(columns={'customer_id': 'Total Customers'}).reset_index()
+        
+        st.dataframe(segment_summary.style.format({
+            'recency': '{:.1f} hari',
+            'frequency': '{:.2f} order',
+            'monetary': 'BRL {:.2f}'
+        }))
+
+        st.markdown("""
+        - **Champions:** Pelanggan terbaik yang baru saja belanja, sering, dan dengan nominal besar.
+        - **Loyalist:** Pelanggan yang cukup setia dan memberikan kontribusi revenue stabil.
+        - **At Risk:** Pelanggan yang dulu sering belanja tapi sudah lama tidak kembali. Perlu promo re-engagement.
+        - **Hibernating:** Pelanggan yang jarang belanja dan sudah sangat lama tidak aktif.
+        """)
+    pass
+with tab_eda:
+    
+    col_eda1, col_eda2 = st.columns(2)
+    
+    with col_eda1:
+        st.subheader("Customer Distribution by State")
+        # Mengambil data distribusi pelanggan per negara bagian
+        state_df = main_df.groupby("customer_state").customer_unique_id.nunique().sort_values(ascending=False).head(10).reset_index()
+        
+        fig_state, ax_state = plt.subplots(figsize=(10, 6))
+        sns.barplot(x="customer_unique_id", y="customer_state", data=state_df, palette="magma", ax=ax_state)
+        ax_state.set_xlabel("Number of Unique Customers")
+        ax_state.set_ylabel("State")
+        st.pyplot(fig_state)
+        
+        st.write("""
+        **Insight Geografis:**
+        Negara bagian **SP (Sao Paulo)** mendominasi basis pelanggan secara signifikan. 
+        Strategi pemasaran atau promo ongkir dapat difokuskan pada wilayah ini untuk efisiensi logistik.
+        """)
+
+    with col_eda2:
+        st.subheader("Order Status Overview")
+        # Melihat status pesanan untuk memastikan operasional lancar
+        status_df = main_df["order_status"].value_counts().reset_index()
+        
+        fig_status, ax_status = plt.subplots(figsize=(10, 6))
+        sns.barplot(x="count", y="order_status", data=status_df, palette="viridis", ax=ax_status)
+        ax_status.set_xlabel("Number of Orders")
+        ax_status.set_ylabel(None)
+        st.pyplot(fig_status)
+        
+        st.write("""
+        **Insight Operasional:**
+        Mayoritas pesanan berstatus **'delivered'**. Hal ini menunjukkan bahwa proses fulfillment berjalan baik, 
+        sehingga skor RFM yang dihasilkan valid karena didasarkan pada pesanan yang benar-benar sampai ke pelanggan.
+        """)
+
+    st.divider()
+    
+    st.subheader("Seasonality & Operational Note")
+    st.info("""
+    - Masalah operasional dan fluktuasi penjualan bersifat nasional, bukan spesifik wilayah tertentu.
+    - Terdapat pola musiman di mana bulan-bulan tertentu mengalami penurunan (seperti Juni-Juli).
+    - **Saran Bisnis:** Perusahaan dapat melakukan kampanye agresif pada bulan-bulan 'sepi' untuk menjaga pertumbuhan revenue tetap stabil sepanjang tahun.
+    """)
 
 st.caption('Copyright © Fanidyasani Atantya 2026')

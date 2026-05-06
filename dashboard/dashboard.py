@@ -29,7 +29,7 @@ def format_big_number(num):
 
 with st.sidebar:
     st.title("E-Commerce Dashboard ✨")
-    st.image("https://github.com/dicodingacademy/assets/raw/main/logo.png")
+    st.image("https://cdn-icons-png.flaticon.com/512/3081/3081559.png")
     
     start_date, end_date = st.date_input(
         label='Rentang Waktu 📅',
